@@ -3,7 +3,7 @@ package models.station;
 import models.player.ChefPlayer;
 import models.item.Dish;
 import models.item.kitchenutensils.Plate;
-import models.stage.Stage;
+import controllers.Stage;
 import models.core.Position;
 import models.enums.StationType;
 
