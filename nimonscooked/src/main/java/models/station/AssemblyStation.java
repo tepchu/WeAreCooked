@@ -20,7 +20,7 @@ public class AssemblyStation extends Station {
     public void interact(ChefPlayer chef) {
         // Logic plating basic:
         // - kalau chef pegang plate bersih & ada ingredient di station -> buat dish di situ
-        if (chef.getInventory() instanceof Plate p && looseIngredient != null && !p.isDirty()) {
+        if (chef.getInventory() instanceof Plate p && looseIngredient != null && p.isClean()) {
             Dish dish = p.getDish();
             if (dish == null) {
                 dish = new Dish("Custom Dish");
@@ -30,7 +30,7 @@ public class AssemblyStation extends Station {
             looseIngredient = null;
         }
         // kalau chef pegang ingredient & ada plate di station
-        else if (chef.getInventory() instanceof Preparable prep && plateOnStation != null && !plateOnStation.isDirty()) {
+        else if (chef.getInventory() instanceof Preparable prep && plateOnStation != null && plateOnStation.isClean()) {
             Dish dish = plateOnStation.getDish();
             if (dish == null) {
                 dish = new Dish("Custom Dish");
