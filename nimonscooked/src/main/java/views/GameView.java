@@ -28,6 +28,7 @@ import models.core.*;
 import models.recipe.*;
 import models.order.Order;
 import models.enums.*;
+import models.station.IngredientStorage;
 import java.util.*;
 
 public class GameView {
@@ -176,7 +177,7 @@ public class GameView {
         panel. setStyle("-fx-background-color: #3A3A3A;" + "-fx-background-radius: 10;");
 
         Label title = new Label("ORDERS");
-        title. setFont(Font.font("Inter", FontWeight. BOLD, 14));
+        title. setFont(Font.font("Arial", FontWeight. BOLD, 14));
         title. setTextFill(Color. WHITE);
         panel.getChildren().add(title);
 
@@ -214,11 +215,11 @@ public class GameView {
 //        }
 
         Label titleLabel = new Label("SCORE");
-        titleLabel.setFont(Font.font("Inter", FontWeight. BOLD, 14));
+        titleLabel.setFont(Font.font("Arial", FontWeight. BOLD, 14));
         titleLabel.setTextFill(Color. LIGHTGRAY);
 
         scoreValueLabel = new Label("$0");
-        scoreValueLabel.setFont(Font.font("Inter", FontWeight.BOLD, 32));
+        scoreValueLabel.setFont(Font.font("Arial", FontWeight.BOLD, 32));
         scoreValueLabel.setTextFill(Color. GOLD);
 
         panel.getChildren().addAll(titleLabel, scoreValueLabel);
@@ -243,12 +244,12 @@ public class GameView {
 //        }
 
         Label titleLabel = new Label("TIME");
-        titleLabel.setFont(Font.font("Inter", FontWeight. BOLD, 14));
+        titleLabel.setFont(Font.font("Arial", FontWeight. BOLD, 14));
         titleLabel. setTextFill(Color.LIGHTGRAY);
 //        titleBox.getChildren(). add(titleLabel);
 
         timeValueLabel = new Label("3:00");
-        timeValueLabel.setFont(Font.font("Inter", FontWeight.BOLD, 32));
+        timeValueLabel.setFont(Font.font("Arial", FontWeight.BOLD, 32));
         timeValueLabel.setTextFill(Color. WHITE);
 
         panel. getChildren().addAll(titleLabel, timeValueLabel);
@@ -272,12 +273,12 @@ public class GameView {
         bottom.setPadding(new Insets(10));
         bottom.setStyle("-fx-background-color: #2A2A2A;");
 
-        Label controlsLabel = new Label("W/A/S/D: Move | C/V: Interact | B: Switch Chef | ESC: Pause");
-        controlsLabel.setFont(Font.font("Inter", 12));
+        Label controlsLabel = new Label("W/A/S/D: Move | C/V: Arialact | B: Switch Chef | ESC: Pause");
+        controlsLabel.setFont(Font.font("Arial", 12));
         controlsLabel.setTextFill(Color. LIGHTGRAY);
 
         chefLabel = new Label("Active: Chef 1");
-        chefLabel.setFont(Font.font("Inter", FontWeight.BOLD, 14));
+        chefLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
         chefLabel.setTextFill(Color.LIGHTGREEN);
 
         Region spacer = new Region();
@@ -366,19 +367,19 @@ public class GameView {
 //            box.getChildren(). add(pizzaImg);
 //        } else {
         Label pizzaIcon = new Label("[PIZZA]");
-        pizzaIcon.setFont(Font.font("Inter", FontWeight.BOLD, 10));
+        pizzaIcon.setFont(Font.font("Arial", FontWeight.BOLD, 10));
         pizzaIcon.setTextFill(Color. ORANGE);
 //        box.getChildren().add(pizzaIcon);
 //        }
         Label nameLabel = new Label(getShortName(order. getRecipe().getName()));
-        nameLabel.setFont(Font.font("Inter", FontWeight.BOLD, 10));
+        nameLabel.setFont(Font.font("Arial", FontWeight.BOLD, 10));
         nameLabel.setTextFill(Color.WHITE);
 
         int timeLeft = gameStage.getOrderTimeRemaining(order);
         double progress = gameStage.getOrderTimeProgress(order);
 
         Label timeLabel = new Label("Time: " + timeLeft + "s");
-        timeLabel.setFont(Font.font("Inter", FontWeight.BOLD, 11));
+        timeLabel.setFont(Font.font("Arial", FontWeight.BOLD, 11));
         timeLabel.setTextFill(getProgressColor(progress));
 
         HBox ingredientsBox = createIngredientsIcons(order. getRecipe());
@@ -428,7 +429,7 @@ public class GameView {
 //            } else {
 //                String emoji = getIngredientEmoji(ingredientName);
 //                Label iconLabel = new Label(emoji);
-//                iconLabel.setFont(Font.font("Inter", 12));
+//                iconLabel.setFont(Font.font("Arial", 12));
 //                icons.getChildren().add(iconLabel);
 //            }
 //        }
@@ -478,7 +479,7 @@ public class GameView {
 
     private void drawMap(GameMap map) {
         char[][] grid = map.getGrid();
-        Map<Position, Station> stations = map. getAllStations();
+        Map<Position, Station> stations = map.getAllStations();
 
         for (int y = 0; y < GameMap.HEIGHT; y++) {
             for (int x = 0; x < GameMap.WIDTH; x++) {
@@ -500,25 +501,46 @@ public class GameView {
                 gc.setFill(tileColor);
                 gc.fillRect(drawX, drawY, TILE_SIZE, TILE_SIZE);
 
-//                if (tile == 'X') {
-//                    drawTileWithFallback(drawX, drawY, "wall", COLOR_WALL);
-//                } else if (station != null) {
-//                    String stationKey = getStationImageKey(station);
-//                    Color fallbackColor = getStationColor(station);
-//                    drawTileWithFallback(drawX, drawY, stationKey, fallbackColor);
-//                    drawStationLabel(drawX, drawY, station);
-//                } else {
-//                    drawTileWithFallback(drawX, drawY, "floor", COLOR_FLOOR);
-//                }
-                gc.setStroke(Color.DARKGRAY);
+                gc.setStroke(Color.rgb(100, 100, 100));
                 gc.setLineWidth(1);
-                gc. strokeRect(drawX, drawY, TILE_SIZE, TILE_SIZE);
+                gc.strokeRect(drawX, drawY, TILE_SIZE, TILE_SIZE);
+
                 if (station != null) {
                     drawStationLabel(drawX, drawY, station);
-                    System.out.println("Station is drawn.");
                 }
             }
         }
+    }
+
+    private void drawStationLabel(int x, int y, Station station) {
+        String label = switch (station.getType()) {
+            case CUTTING -> "C";
+            case COOKING -> "R";
+            case ASSEMBLY -> "A";
+            case SERVING_COUNTER -> "S";
+            case WASHING -> "W";
+            case INGREDIENT_STORAGE -> {
+                if (station instanceof IngredientStorage storage) {
+                    IngredientType type = storage. getIngredientType();
+                    yield switch (type) {
+                        case DOUGH -> "D";
+                        case TOMATO -> "T";
+                        case CHEESE -> "C";
+                        case SAUSAGE -> "S";
+                        case CHICKEN -> "A";
+                        default -> "I";
+                    };
+                }
+                yield "I";
+            }
+            case PLATE_STORAGE -> "P";
+            case TRASH -> "T";
+            default -> "? ";
+        };
+
+        gc.setFill(Color.WHITE);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+        gc.fillText(label, x + (double) TILE_SIZE / 2 - 5, y + (double) TILE_SIZE / 2 + 5);
     }
 
 //    private void drawTileWithFallback(int x, int y, String imageKey, Color fallbackColor) {
@@ -554,28 +576,28 @@ public class GameView {
             case INGREDIENT_STORAGE -> COLOR_INGREDIENT;
             case PLATE_STORAGE -> COLOR_PLATE;
             case TRASH -> COLOR_TRASH;
-            default -> COLOR_FLOOR;
+//            default -> COLOR_FLOOR;
         };
     }
-
-    private void drawStationLabel(int x, int y, Station station) {
-
-        String label = switch (station.getType()) {
-            case CUTTING -> "C";
-            case COOKING -> "R";
-            case ASSEMBLY -> "A";
-            case SERVING_COUNTER -> "S";
-            case WASHING -> "W";
-            case INGREDIENT_STORAGE -> "I";
-            case PLATE_STORAGE -> "P";
-            case TRASH -> "T";
-            default -> "? ";
-        };
-
-        gc.setFill(Color.WHITE);
-        gc. setFont(Font. font("Inter", FontWeight.BOLD, 14));
-        gc. fillText(label, x + (double) TILE_SIZE / 2 - 5, y + (double) TILE_SIZE / 2 + 5);
-    }
+//
+//    private void drawStationLabel(int x, int y, Station station) {
+//
+//        String label = switch (station.getType()) {
+//            case CUTTING -> "C";
+//            case COOKING -> "R";
+//            case ASSEMBLY -> "A";
+//            case SERVING_COUNTER -> "S";
+//            case WASHING -> "W";
+//            case INGREDIENT_STORAGE -> "I";
+//            case PLATE_STORAGE -> "P";
+//            case TRASH -> "T";
+//            default -> "? ";
+//        };
+//
+//        gc.setFill(Color.WHITE);
+//        gc. setFont(Font. font("Arial", FontWeight.BOLD, 14));
+//        gc. fillText(label, x + (double) TILE_SIZE / 2 - 5, y + (double) TILE_SIZE / 2 + 5);
+//    }
 
     private void drawPlayers() {
         List<ChefPlayer> chefs = gameStage. getChefs();
@@ -622,7 +644,7 @@ public class GameView {
                         TILE_SIZE - 2 * padding + 4, TILE_SIZE - 2 * padding + 4);
             }
             gc.setFill(Color.WHITE);
-//            gc. setFont(Font. font("Inter", FontWeight.BOLD, 10));
+//            gc. setFont(Font. font("Arial", FontWeight.BOLD, 10));
 //            String label = isActive ? "★ " + chef.getName() : chef.getName();
 //            gc.fillText(label, x + 5, y - 5);
             drawDirectionIndicator(chef, x, y);
@@ -675,7 +697,7 @@ public class GameView {
         root.setStyle("-fx-background-color: #2D2D2D;");
 
         Label title = new Label("PAUSED");
-        title.setFont(Font.font("Inter", FontWeight.BOLD, 32));
+        title.setFont(Font.font("Arial", FontWeight.BOLD, 32));
         title. setTextFill(Color.WHITE);
 
         Button resumeBtn = createPauseButton("Resume");
@@ -715,7 +737,7 @@ public class GameView {
     private Button createPauseButton(String text) {
         Button btn = new Button(text);
         btn.setPrefWidth(200);
-        btn. setFont(Font.font("Inter", FontWeight.BOLD, 14));
+        btn. setFont(Font.font("Arial", FontWeight.BOLD, 14));
         btn.setStyle(
                 "-fx-background-color: #4682B4;" +
                         "-fx-text-fill: white;" +
