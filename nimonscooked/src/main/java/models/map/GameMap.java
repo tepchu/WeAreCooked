@@ -13,15 +13,19 @@ public class GameMap {
     private final char[][] grid;
     private final Map<Position, Station> stations;
     private final List<Position> chefSpawns;
+    private Random random;
+
 
     public GameMap(char[][] grid) {
         this.grid = grid;
         this.stations = new HashMap<>();
         this.chefSpawns = new ArrayList<>();
+        this.random = new Random();
         parseStations();
     }
 
     private void parseStations() {
+        List<Position> ingredientStoragePositions = new ArrayList<>();
         for (int y = 0; y < HEIGHT; y++) {
             for (int x = 0; x < WIDTH; x++) {
                 Position pos = new Position(x, y);
@@ -41,8 +45,7 @@ public class GameMap {
                     case 'P' -> stations.put(pos, new PlateStorage(pos, 3));
                     case 'T' -> stations.put(pos, new TrashStation(pos));
                     case 'I' -> {
-                        IngredientType type = assignIngredientType(x, y);
-                        stations.put(pos, new IngredientStorage(pos, type));
+                        ingredientStoragePositions.add(pos);
                     }
                     case 'V' -> {
                         chefSpawns.add(pos);
@@ -51,10 +54,11 @@ public class GameMap {
                 }
             }
         }
+
+        assignRandomizedIngredients(ingredientStoragePositions);
     }
 
-    private IngredientType assignIngredientType(int x, int y) {
-        // Distribute ingredients across storage stations
+    private void assignRandomizedIngredients (List<Position> positions) {
         IngredientType[] types = {
                 IngredientType.DOUGH,
                 IngredientType.TOMATO,
@@ -62,7 +66,14 @@ public class GameMap {
                 IngredientType.SAUSAGE,
                 IngredientType.CHICKEN
         };
-        return types[(x + y) % types.length];
+        List<IngredientType> ingredientList = Arrays.asList(types);
+        Collections.shuffle(ingredientList, random);
+
+        for (int i = 0; i < positions.size(); i++) {
+            Position pos = positions.get(i);
+            IngredientType ingredientType = ingredientList.get(i % ingredientList.size());
+            stations.put(pos, new IngredientStorage(pos, ingredientType));
+        }
     }
 
     public boolean isWalkable(int x, int y) {
