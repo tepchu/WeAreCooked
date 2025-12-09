@@ -29,6 +29,10 @@ import models.recipe.*;
 import models.order.Order;
 import models.enums.*;
 import models.station.IngredientStorage;
+import models.item.kitchenutensils.Plate;
+import models.item.Dish;
+import models.item.Preparable;
+import models.player.CurrentAction;
 
 import java.util.*;
 
@@ -51,7 +55,7 @@ public class GameView {
     private static final Color COLOR_PLATE = Color.PURPLE;
     private static final Color COLOR_TRASH = Color.ORANGE;
 
-    private GameController gameController;
+    private final GameController gameController;
     private Canvas canvas;
     private GraphicsContext gc;
     private controllers.Stage gameStage;
@@ -67,7 +71,7 @@ public class GameView {
     private AnimationTimer gameLoop;
     private long lastUpdate = 0;
 
-    private Map<String, Image> imageCache = new HashMap<>();
+    private final Map<String, Image> imageCache = new HashMap<>();
     private boolean useImages = false; // Set to TRUE when image resource is available
 
     public GameView(GameController controller) {
@@ -182,8 +186,7 @@ public class GameView {
         panel.setStyle("-fx-background-color: #3A3A3A;" + "-fx-background-radius: 10;");
 
         Label title = new Label("ORDERS");
-        title.setFont(Font.font("Inter" +
-                "", FontWeight.BOLD, 14));
+        title.setFont(Font.font("Inter", FontWeight.BOLD, 14));
         title.setTextFill(Color.WHITE);
         panel.getChildren().add(title);
 
@@ -221,13 +224,11 @@ public class GameView {
 //        }
 
         Label titleLabel = new Label("SCORE");
-        titleLabel.setFont(Font.font("Inter" +
-                "", FontWeight.BOLD, 14));
+        titleLabel.setFont(Font.font("Inter", FontWeight.BOLD, 14));
         titleLabel.setTextFill(Color.LIGHTGRAY);
 
         scoreValueLabel = new Label("$0");
-        scoreValueLabel.setFont(Font.font("Inter" +
-                "", FontWeight.BOLD, 32));
+        scoreValueLabel.setFont(Font.font("Inter", FontWeight.BOLD, 32));
         scoreValueLabel.setTextFill(Color.GOLD);
 
         panel.getChildren().addAll(titleLabel, scoreValueLabel);
@@ -252,14 +253,12 @@ public class GameView {
 //        }
 
         Label titleLabel = new Label("TIME");
-        titleLabel.setFont(Font.font("Inter" +
-                "", FontWeight.BOLD, 14));
+        titleLabel.setFont(Font.font("Inter", FontWeight.BOLD, 14));
         titleLabel.setTextFill(Color.LIGHTGRAY);
 //        titleBox.getChildren(). add(titleLabel);
 
         timeValueLabel = new Label("3:00");
-        timeValueLabel.setFont(Font.font("Inter" +
-                "", FontWeight.BOLD, 32));
+        timeValueLabel.setFont(Font.font("Inter", FontWeight.BOLD, 32));
         timeValueLabel.setTextFill(Color.WHITE);
 
         panel.getChildren().addAll(titleLabel, timeValueLabel);
@@ -284,20 +283,17 @@ public class GameView {
         bottom.setStyle("-fx-background-color: #2A2A2A;");
 
         Label controlsLabel = new Label("W/A/S/D: Move | Shift+WASD: Dash | SPACE: Throw | C/V: Interact | B: Switch Chef | ESC: Pause");
-        controlsLabel.setFont(Font.font("Inter" +
-                "", 12));
+        controlsLabel.setFont(Font.font("Inter", 12));
         controlsLabel.setTextFill(Color.LIGHTGRAY);
 
         chefLabel = new Label("Active: Chef 1");
-        chefLabel.setFont(Font.font("Inter" +
-                "", FontWeight.BOLD, 14));
+        chefLabel.setFont(Font.font("Inter", FontWeight.BOLD, 14));
         chefLabel.setTextFill(Color.LIGHTGREEN);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         dashCooldownLabel = new Label("Dash: Ready");
-        dashCooldownLabel.setFont(Font.font("Inter" +
-                "", FontWeight.BOLD, 12));
+        dashCooldownLabel.setFont(Font.font("Inter", FontWeight.BOLD, 12));
         dashCooldownLabel.setTextFill(Color.LIGHTGREEN);
         bottom.getChildren().add(dashCooldownLabel);
         bottom.getChildren().addAll(controlsLabel, spacer, chefLabel);
@@ -345,6 +341,23 @@ public class GameView {
 
         ChefPlayer activeChef = gameStage.getActiveChef();
         if (activeChef != null) {
+            String chefStatus = "Active: " + activeChef.getName();
+            if (activeChef.isBusy()) {
+                CurrentAction action = activeChef.getCurrentAction();
+                int remaining = activeChef.getBusyTimeRemaining();
+                String actionName = switch (action) {
+                    case CUTTING -> "Cutting";
+                    case COOKING -> "Cooking";
+                    case WASHING -> "Washing";
+                    default -> "Busy";
+                };
+                chefStatus += " (" + actionName + " " + remaining + "s)";
+                chefLabel.setTextFill(Color.ORANGE);
+            } else {
+                chefLabel.setTextFill(Color.LIGHTGREEN);
+            }
+            chefLabel.setText(chefStatus);
+
             long cooldown = activeChef.getDashCooldownRemaining();
             if (cooldown > 0) {
                 dashCooldownLabel.setText("Dash: " + (cooldown / 1000.0) + "s");
@@ -390,22 +403,19 @@ public class GameView {
 //            box.getChildren(). add(pizzaImg);
 //        } else {
         Label pizzaIcon = new Label("[PIZZA]");
-        pizzaIcon.setFont(Font.font("Inter" +
-                "", FontWeight.BOLD, 10));
+        pizzaIcon.setFont(Font.font("Inter", FontWeight.BOLD, 10));
         pizzaIcon.setTextFill(Color.ORANGE);
 //        box.getChildren().add(pizzaIcon);
 //        }
         Label nameLabel = new Label(getShortName(order.getRecipe().getName()));
-        nameLabel.setFont(Font.font("Inter" +
-                "", FontWeight.BOLD, 10));
+        nameLabel.setFont(Font.font("Inter", FontWeight.BOLD, 10));
         nameLabel.setTextFill(Color.WHITE);
 
         int timeLeft = gameStage.getOrderTimeRemaining(order);
         double progress = gameStage.getOrderTimeProgress(order);
 
         Label timeLabel = new Label("Time: " + timeLeft + "s");
-        timeLabel.setFont(Font.font("Inter" +
-                "", FontWeight.BOLD, 11));
+        timeLabel.setFont(Font.font("Inter", FontWeight.BOLD, 11));
         timeLabel.setTextFill(getProgressColor(progress));
 
         HBox ingredientsBox = createIngredientsIcons(order.getRecipe());
@@ -439,8 +449,7 @@ public class GameView {
             String shortName = ingredientName.substring(0, Math.min(2, ingredientName.length())).toUpperCase();
 
             Label iconLabel = new Label("[" + shortName + "]");
-            iconLabel.setFont(Font.font("Inter" +
-                    "", 8));
+            iconLabel.setFont(Font.font("Inter", 8));
             iconLabel.setTextFill(Color.LIGHTGRAY);
             icons.getChildren().add(iconLabel);
         }
@@ -521,8 +530,7 @@ public class GameView {
             gc.fillRect(x + 5, y + 5, TILE_SIZE - 10, TILE_SIZE - 10);
 
             // Draw item indicator
-            if (item instanceof Ingredient) {
-                Ingredient ing = (Ingredient) item;
+            if (item instanceof Ingredient ing) {
 
                 // Color based on state
                 Color itemColor;
@@ -610,6 +618,7 @@ public class GameView {
     private void drawStationLabel(int x, int y, Station station) {
         String label;
         Color labelColor = Color.WHITE;
+        String extraInfo = ""; // For showing ingredients
 
         switch (station.getType()) {
             case CUTTING -> {
@@ -622,14 +631,45 @@ public class GameView {
             }
             case ASSEMBLY -> {
                 AssemblyStation assembly = (AssemblyStation) station;
-                if (assembly.hasPlate() && assembly.hasIngredient()) {
-                    label = "PLATE+ING";
-                    labelColor = Color.YELLOW;
-                } else if (assembly.hasPlate()) {
-                    label = "PLATE";
-                    labelColor = Color.LIGHTGREEN;
+                if (assembly.hasPlate()) {
+                    Plate plate = assembly.getPlateOnStation();
+                    if (plate != null && plate.hasDish()) {
+                        // Show ingredients on the plate
+                        Dish dish = plate.getDish();
+                        List<Preparable> components = dish.getComponents();
+                        if (!components.isEmpty()) {
+                            StringBuilder sb = new StringBuilder();
+                            for (Preparable p : components) {
+                                if (p instanceof Ingredient) {
+                                    String name = ((Ingredient) p).getName();
+                                    sb.append(name.substring(0, Math.min(2, name.length())).toUpperCase());
+                                }
+                            }
+                            extraInfo = sb.toString();
+                            label = "P:" + components.size();
+                            labelColor = Color.YELLOW;
+                        } else {
+                            label = "PLATE";
+                            labelColor = Color.LIGHTGREEN;
+                        }
+                    } else if (assembly.hasIngredient()) {
+                        // Get ingredient count from the list
+                        int ingCount = 1;
+                        if (assembly.getIngredientsOnStation() != null) {
+                            ingCount = assembly.getIngredientsOnStation().size();
+                        }
+                        label = "P+I:" + ingCount;
+                        labelColor = Color.YELLOW;
+                    } else {
+                        label = "PLATE";
+                        labelColor = Color.LIGHTGREEN;
+                    }
                 } else if (assembly.hasIngredient()) {
-                    label = "INGRED";
+                    int ingCount = 1;
+                    if (assembly.getIngredientsOnStation() != null) {
+                        ingCount = assembly.getIngredientsOnStation().size();
+                    }
+                    label = "ING:" + ingCount;
                     labelColor = Color.ORANGE;
                 } else {
                     label = "ASSEMBLY";
@@ -667,31 +707,75 @@ public class GameView {
                 label = "TRASH";
                 labelColor = Color.RED;
             }
-            default -> label = "?";
+            default -> label = "? ";
         }
 
+        // Draw background for label
         gc.setFill(Color.rgb(0, 0, 0, 0.7));
         gc.fillRect(x + 2, y + TILE_SIZE - 18, TILE_SIZE - 4, 16);
 
         // Draw label text
         gc.setFill(labelColor);
-        gc.setFont(Font.font("Inter" +
-                "", FontWeight.BOLD, 9));
+        gc.setFont(Font.font("Inter", FontWeight.BOLD, 9));
         gc.fillText(label, x + 4, y + TILE_SIZE - 6);
+
+        // Draw extra info (ingredient abbreviations) on top of station
+        if (!extraInfo.isEmpty()) {
+            gc.setFill(Color.rgb(0, 0, 0, 0.8));
+            gc.fillRect(x + 2, y + 2, TILE_SIZE - 4, 14);
+            gc.setFill(Color.CYAN);
+            gc.setFont(Font.font("Inter", FontWeight.BOLD, 8));
+            gc.fillText(extraInfo, x + 4, y + 12);
+        }
     }
 
     private void drawChefInventory(ChefPlayer chef, int x, int y) {
         if (chef.hasItem()) {
             Item item = chef.getInventory();
             String itemName = item.getName();
+            String displayText = itemName;
+
+            if (item instanceof Plate plate) {
+                if (plate.hasDish()) {
+                    Dish dish = plate.getDish();
+                    List<Preparable> components = dish.getComponents();
+                    if (!components.isEmpty()) {
+                        StringBuilder sb = new StringBuilder("P[");
+                        for (int i = 0; i < components.size(); i++) {
+                            Preparable p = components.get(i);
+                            if (p instanceof Ingredient) {
+                                String name = ((Ingredient) p).getName();
+                                sb.append(name.substring(0, Math.min(2, name.length())).toUpperCase());
+                                if (i < components.size() - 1) sb.append(",");
+                            }
+                        }
+                        sb.append("]");
+                        displayText = sb.toString();
+                    } else {
+                        displayText = "Plate(E)";
+                    }
+                } else {
+                    displayText = plate.isClean() ? "Plate(C)" : "Plate(D)"; // Clean or Dirty
+                }
+            } else if (item instanceof Ingredient ing) {
+                String stateChar = switch (ing.getState()) {
+                    case RAW -> "R";
+                    case CHOPPED -> "C";
+                    case COOKED -> "K";
+                    case BURNED -> "B";
+                    default -> "? ";
+                };
+                displayText = ing.getName().substring(0, Math.min(4, ing.getName().length())) + "(" + stateChar + ")";
+            }
+
+            int boxWidth = Math.max(TILE_SIZE + 10, displayText.length() * 6 + 10);
 
             gc.setFill(Color.rgb(0, 0, 0, 0.8));
-            gc.fillRect(x - 5, y + TILE_SIZE + 2, TILE_SIZE + 10, 18);
+            gc.fillRect(x - 5, y + TILE_SIZE + 2, boxWidth, 18);
 
             gc.setFill(Color.YELLOW);
-            gc.setFont(Font.font("Inter" +
-                    "", FontWeight.BOLD, 10));
-            gc.fillText(itemName.substring(0, Math.min(8, itemName.length())), x, y + TILE_SIZE + 14);
+            gc.setFont(Font.font("Inter", FontWeight.BOLD, 9));
+            gc.fillText(displayText, x, y + TILE_SIZE + 14);
         }
     }
 
@@ -773,12 +857,58 @@ public class GameView {
             }
             gc.setFill(Color.WHITE);
             drawDirectionIndicator(chef, x, y);
-            gc.setFont(Font.font("Inter" +
-                    "", FontWeight.BOLD, 10));
+            gc.setFont(Font.font("Inter", FontWeight.BOLD, 10));
             String label = isActive ? "★ " + chef.getName() : chef.getName();
             gc.fillText(label, x + 5, y - 5);
             drawChefInventory(chef, x, y);
+
+            if (chef.isBusy()) {
+                drawBusyProgressBar(chef, x, y);
+            }
         }
+    }
+
+    private void drawBusyProgressBar(ChefPlayer chef, int x, int y) {
+        double progress = chef.getBusyProgress();
+        CurrentAction action = chef.getCurrentAction();
+        int timeRemaining = chef.getBusyTimeRemaining();
+
+        // Progress bar dimensions
+        int barWidth = TILE_SIZE - 4;
+        int barHeight = 8;
+        int barX = x + 2;
+        int barY = y - 20; // Above the chef name
+
+        // Background
+        gc.setFill(Color.rgb(40, 40, 40, 0.9));
+        gc.fillRoundRect(barX - 2, barY - 2, barWidth + 4, barHeight + 14, 4, 4);
+
+        // Progress bar background
+        gc.setFill(Color.rgb(60, 60, 60));
+        gc.fillRoundRect(barX, barY, barWidth, barHeight, 3, 3);
+
+        // Progress bar fill - color based on action type
+        Color progressColor = switch (action) {
+            case CUTTING -> Color.rgb(255, 165, 0);   // Orange for cutting
+            case COOKING -> Color.rgb(255, 69, 0);    // Red-Orange for cooking
+            case WASHING -> Color.rgb(30, 144, 255);  // Blue for washing
+            default -> Color.rgb(46, 204, 113);       // Green for others
+        };
+
+        gc.setFill(progressColor);
+        gc.fillRoundRect(barX, barY, barWidth * progress, barHeight, 3, 3);
+
+        // Action label and time
+        String actionLabel = switch (action) {
+            case CUTTING -> "CUTTING";
+            case COOKING -> "COOKING";
+            case WASHING -> "WASHING";
+            default -> "BUSY";
+        };
+
+        gc.setFill(Color.WHITE);
+        gc.setFont(Font.font("Inter", FontWeight.BOLD, 8));
+        gc.fillText(actionLabel + " " + timeRemaining + "s", barX, barY + barHeight + 10);
     }
 
     private void drawDirectionIndicator(ChefPlayer chef, int x, int y) {
@@ -826,8 +956,7 @@ public class GameView {
         root.setStyle("-fx-background-color: #2D2D2D;");
 
         Label title = new Label("PAUSED");
-        title.setFont(Font.font("Inter" +
-                "", FontWeight.BOLD, 32));
+        title.setFont(Font.font("Inter", FontWeight.BOLD, 32));
         title.setTextFill(Color.WHITE);
 
         Button resumeBtn = createPauseButton("Resume");
@@ -867,8 +996,7 @@ public class GameView {
     private Button createPauseButton(String text) {
         Button btn = new Button(text);
         btn.setPrefWidth(200);
-        btn.setFont(Font.font("Inter" +
-                "", FontWeight.BOLD, 14));
+        btn.setFont(Font.font("Inter", FontWeight.BOLD, 14));
         btn.setStyle(
                 "-fx-background-color: #4682B4;" +
                         "-fx-text-fill: white;" +
