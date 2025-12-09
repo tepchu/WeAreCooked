@@ -22,4 +22,8 @@ public class IngredientStorage extends Station {
 
         }
     }
+
+    public IngredientType getIngredientType() {
+        return type;
+    }
 }
