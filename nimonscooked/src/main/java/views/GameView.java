@@ -78,7 +78,7 @@ public class GameView {
         this.gameStage = controller.getStage();
         loadImages();
     }
-    
+
     // ==================== IMAGE LOADING ====================
 
     private void loadImages() {
@@ -128,7 +128,9 @@ public class GameView {
 
             // Load Station images
             loadImageOriginalSize("station_assembly", "/images/stations/assembly.png");
+            loadImageOriginalSize("station_washing", "/images/stations/washing.png");
             loadImageOriginalSize("station_cutting", "/images/stations/cutting.png");
+            loadImageOriginalSize("floor", "/images/stations/floor.png");
             loadImageOriginalSize("wall", "/images/stations/wall.png");
 
             System.out.println("[GameView] Loaded " + imageCache.size() + " images successfully");
@@ -570,6 +572,8 @@ public class GameView {
                     Color fallbackColor = getStationColor(station);
                     drawTileWithFallback(drawX, drawY, stationKey, fallbackColor);
                     drawStationLabel(drawX, drawY, station);
+                } else if (tile == '.' || tile == 'V') {
+                    drawTileWithFallback(drawX, drawY, "floor", COLOR_FLOOR);
                 } else {
                     drawTileWithFallback(drawX, drawY, "floor", COLOR_FLOOR);
                 }
