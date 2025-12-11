@@ -1031,17 +1031,21 @@ public class GameView {
             boolean imageDrawn = false;
 
             if (useImages && hasImage(imageKey)) {
-                // Draw chef image - smoothly scaled
-                gc.drawImage(getImage(imageKey), x, y, TILE_SIZE, TILE_SIZE);
-                imageDrawn = true;
-            } else if (useImages && isChef1) {
-                // Try base direction image
+            // Draw chef image - smoothly scaled
+            gc.drawImage(getImage(imageKey), x, y, TILE_SIZE, TILE_SIZE);
+            imageDrawn = true;
+} 
+            // ⭐ UBAH: Fallback untuk SEMUA chef, bukan hanya Chef1
+            else if (useImages) {
+                // Try base direction image (without item)
                 String baseKey = getChefBaseImageKey(chef, isChef1);
                 if (hasImage(baseKey)) {
                     gc.drawImage(getImage(baseKey), x, y, TILE_SIZE, TILE_SIZE);
                     imageDrawn = true;
                 }
-            } else if (useImages && !isChef1 && hasImage("chef2")) {
+            }
+            // Fallback terakhir: gambar bulatan
+            else if (useImages && !isChef1 && hasImage("chef2")) {
                 gc.drawImage(getImage("chef2"), x, y, TILE_SIZE, TILE_SIZE);
                 imageDrawn = true;
             }
