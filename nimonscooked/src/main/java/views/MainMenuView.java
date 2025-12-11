@@ -12,6 +12,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.Cursor;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.LinearGradient;
@@ -21,12 +23,19 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class MainMenuView extends Application {
 
     private Image backgroundImage;
-    private Image startButtonImg;
-    private Image howToPlayButtonImg;
+    private Map<String, Image> buttonImages;
     private boolean useImages = true;
+
+    public MainMenuView() {
+        buttonImages = new HashMap<>();
+    }
+
 
     @Override
     public void start(Stage primaryStage) {
@@ -39,9 +48,9 @@ public class MainMenuView extends Application {
         Canvas bgCanvas = new Canvas(800, 600);
         drawBackground(bgCanvas.getGraphicsContext2D());
 
-        VBox mainContent = new VBox(25);
+        VBox mainContent = new VBox(5);
         mainContent.setAlignment(Pos.CENTER);
-        mainContent.setPadding(new Insets(50));
+        mainContent.setPadding(new Insets(20));
 
         // Title with glow effect
         Label titleLabel = new Label("WEARECOOKED");
@@ -64,16 +73,17 @@ public class MainMenuView extends Application {
         subtitleLabel.setEffect(subtitleShadow);
 
         VBox spacer = new VBox();
-        spacer.setMinHeight(30);
+        spacer.setMinHeight(15);
 
         // Create stylish buttons
-        Button startBtn = createStyledButton("START GAME", "#4CAF50");
-        Button howToPlayBtn = createStyledButton("HOW TO PLAY", "#2196F3");
-        Button exitBtn = createStyledButton("EXIT", "#F44336");
+        StackPane startBtn = createImageButton("start", "START GAME", "#4CAF50");
+        StackPane howToPlayBtn = createImageButton("howtoplay", "HOW TO PLAY", "#2196F3");
+        StackPane exitBtn = createImageButton("exit", "EXIT", "#F44336");
 
-        startBtn.setOnAction(e -> openLevelSelect(primaryStage));
-        howToPlayBtn.setOnAction(e -> showHowToPlay());
-        exitBtn.setOnAction(e -> Platform.exit());
+        // Button actions
+        startBtn.setOnMouseClicked(e -> openLevelSelect(primaryStage));
+        howToPlayBtn.setOnMouseClicked(e -> showHowToPlay());
+        exitBtn.setOnMouseClicked(e -> Platform.exit());
 
         mainContent.getChildren().addAll(
                 startBtn,
@@ -93,15 +103,162 @@ public class MainMenuView extends Application {
     private void loadImages() {
         try {
             // Try to load custom background
-            var bgResource = getClass().getResourceAsStream("/images/backgrounds/menu_bg.png");
+            var bgResource = getClass().getResourceAsStream("/images/menu/background.png");
             if (bgResource != null) {
                 backgroundImage = new Image(bgResource);
                 System.out.println("✓ Loaded background image");
             }
+            loadButtonImage("start", "/images/menu/button_start.png");
+            loadButtonImage("start_hover", "/images/menu/button_start_hover.png");
+            loadButtonImage("howtoplay", "/images/menu/button_howtoplay.png");
+            loadButtonImage("howtoplay_hover", "/images/menu/button_howtoplay_hover.png");
+            loadButtonImage("exit", "/images/menu/button_exit.png");
+            loadButtonImage("exit_hover", "/images/menu/button_exit_hover.png");
+
+            System.out.println("✓ Loaded " + buttonImages.size() + " button images");
         } catch (Exception e) {
             System.out.println("Using gradient background");
             useImages = false;
         }
+    }
+
+    private void loadButtonImage(String key, String path) {
+        try {
+            var resource = getClass().getResourceAsStream(path);
+            if (resource != null) {
+                Image img = new Image(resource);
+                if (!img.isError()) {
+                    buttonImages.put(key, img);
+                    System.out.println("✓ Loaded button: " + key);
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("✗ Failed to load: " + path);
+        }
+    }
+
+    private boolean hasButtonImage(String key) {
+        return buttonImages.containsKey(key) && buttonImages.get(key) != null;
+    }
+
+    private StackPane createImageButton(String imageKey, String text, String fallbackColor) {
+        StackPane button = new StackPane();
+        button.setPrefSize(320, 80);
+        button.setCursor(Cursor.HAND);
+
+        // Check if we have custom button images
+        if (useImages && hasButtonImage(imageKey)) {
+            // Use image-based button
+            ImageView normalView = new ImageView(buttonImages.get(imageKey));
+            normalView.setFitWidth(320);
+            normalView.setFitHeight(150);
+            normalView.setPreserveRatio(false);
+            normalView.setSmooth(true);
+
+            ImageView hoverView = null;
+            if (hasButtonImage(imageKey + "_hover")) {
+                hoverView = new ImageView(buttonImages.get(imageKey + "_hover"));
+                hoverView.setFitWidth(320);
+                hoverView.setFitHeight(150);
+                hoverView.setPreserveRatio(false);
+                hoverView.setSmooth(true);
+                hoverView.setVisible(false);
+            }
+
+            button.getChildren().add(normalView);
+            if (hoverView != null) {
+                button.getChildren().add(hoverView);
+                ImageView finalHoverView = hoverView;
+
+                // Hover effects
+                button.setOnMouseEntered(e -> {
+                    normalView.setVisible(false);
+                    finalHoverView.setVisible(true);
+                    button.setScaleX(1.05);
+                    button.setScaleY(1.05);
+                });
+
+                button.setOnMouseExited(e -> {
+                    normalView.setVisible(true);
+                    finalHoverView.setVisible(false);
+                    button.setScaleX(1.0);
+                    button.setScaleY(1.0);
+                });
+            } else {
+                // Just scale effect if no hover image
+                button.setOnMouseEntered(e -> {
+                    button.setScaleX(1.05);
+                    button.setScaleY(1.05);
+                });
+
+                button.setOnMouseExited(e -> {
+                    button.setScaleX(1.0);
+                    button.setScaleY(1.0);
+                });
+            }
+
+            // Add shadow
+            DropShadow shadow = new DropShadow();
+            shadow.setColor(Color.rgb(0, 0, 0, 0.5));
+            shadow.setRadius(10);
+            shadow.setOffsetY(5);
+            button.setEffect(shadow);
+
+        } else {
+            // Fall back to styled button
+            Pane btnBackground = new Pane();
+            btnBackground.setPrefSize(320, 100);
+            btnBackground.setStyle(String.format(
+                    "-fx-background-color: %s; " +
+                            "-fx-background-radius: 40; " +
+                            "-fx-border-color: white; " +
+                            "-fx-border-width: 3; " +
+                            "-fx-border-radius: 40;",
+                    fallbackColor
+            ));
+
+            Label btnLabel = new Label(text);
+            btnLabel.setFont(Font.font("Arial", FontWeight.BOLD, 22));
+            btnLabel.setTextFill(Color.WHITE);
+
+            button.getChildren().addAll(btnBackground, btnLabel);
+
+            // Hover effects for styled button
+            button.setOnMouseEntered(e -> {
+                button.setScaleX(1.05);
+                button.setScaleY(1.05);
+                btnBackground.setStyle(String.format(
+                        "-fx-background-color: derive(%s, 20%%); " +
+                                "-fx-background-radius: 40; " +
+                                "-fx-border-color: white; " +
+                                "-fx-border-width: 3; " +
+                                "-fx-border-radius: 40;",
+                        fallbackColor
+                ));
+            });
+
+            button.setOnMouseExited(e -> {
+                button.setScaleX(1.0);
+                button.setScaleY(1.0);
+                btnBackground.setStyle(String.format(
+                        "-fx-background-color: %s; " +
+                                "-fx-background-radius: 15; " +
+                                "-fx-border-color: white; " +
+                                "-fx-border-width: 3; " +
+                                "-fx-border-radius: 15;",
+                        fallbackColor
+                ));
+            });
+
+            // Shadow
+            DropShadow shadow = new DropShadow();
+            shadow.setColor(Color.rgb(0, 0, 0, 0.5));
+            shadow.setRadius(10);
+            shadow.setOffsetY(5);
+            button.setEffect(shadow);
+        }
+
+        return button;
     }
 
     private void drawBackground(GraphicsContext gc) {
