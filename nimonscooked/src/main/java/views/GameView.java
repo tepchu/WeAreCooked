@@ -114,7 +114,7 @@ public class GameView {
             loadImageOriginalSize("chef1_right_sausage", "/images/chef1/chef1_right_sausage.png");
             loadImageOriginalSize("chef1_right_tomato", "/images/chef1/chef1_right_tomato.png");
 
-           // Load Chef2 direction images - WITHOUT resize during load
+            // Load Chef2 direction images - WITHOUT resize during load
             loadImageOriginalSize("chef2_front", "/images/chef2/chef2_front.png");
             loadImageOriginalSize("chef2_back", "/images/chef2/chef2_back.png");
             loadImageOriginalSize("chef2_left", "/images/chef2/chef2_left.png");
@@ -1158,11 +1158,11 @@ public class GameView {
             boolean imageDrawn = false;
 
             if (useImages && hasImage(imageKey)) {
-            // Draw chef image - smoothly scaled
-            gc.drawImage(getImage(imageKey), x, y, TILE_SIZE, TILE_SIZE);
-            imageDrawn = true;
-} 
-            // ⭐ UBAH: Fallback untuk SEMUA chef, bukan hanya Chef1
+                // Draw chef image - smoothly scaled
+                gc.drawImage(getImage(imageKey), x, y, TILE_SIZE, TILE_SIZE);
+                imageDrawn = true;
+            }
+            // UBAH: Fallback untuk SEMUA chef, bukan hanya Chef1
             else if (useImages) {
                 // Try base direction image (without item)
                 String baseKey = getChefBaseImageKey(chef, isChef1);
@@ -1215,9 +1215,9 @@ public class GameView {
     }
 
     private String getChefImageKey(ChefPlayer chef, boolean isChef1) {
-        //⭐ UBAH: karena pas load image untuk chef2, tetep gak muncul di gamenya
+        // UBAH: karena pas load image untuk chef2, tetep gak muncul di gamenya
         String chefPrefix = isChef1 ? "chef1" : "chef2";
-       
+
         String direction = switch (chef.getDirection()) {
             case UP -> "back";
             case DOWN -> "front";
@@ -1241,9 +1241,9 @@ public class GameView {
 
 
     private String getChefBaseImageKey(ChefPlayer chef, boolean isChef1) {
-        //⭐ UBAH: karena pas load image untuk chef2, tetep gak muncul di gamenya
+        // UBAH: karena pas load image untuk chef2, tetep gak muncul di gamenya
         String chefPrefix = isChef1 ? "chef1" : "chef2";
-       
+
         String direction = switch (chef.getDirection()) {
             case UP -> "back";
             case DOWN -> "front";
@@ -1418,14 +1418,14 @@ public class GameView {
             gc.setFont(Font.font("Inter", FontWeight.BOLD, 9));
             gc.fillText(displayText, x + 2, y + TILE_SIZE + 13);
         } else {
-            // ⭐ TAMBAHKAN: Draw icon untuk item lain (apple, dll)
+            // TAMBAHKAN: Draw icon untuk item lain (tomato, dll)
             int iconX = x + TILE_SIZE - 18;
             int iconY = y - 18;
-            
+
             // Draw generic item icon
             gc.setFill(Color.ORANGE);
             gc.fillRect(iconX, iconY, 16, 16);
-            
+
             // Draw first letter of item name
             gc.setFill(Color.WHITE);
             gc.setFont(Font.font("Arial", FontWeight.BOLD, 10));
