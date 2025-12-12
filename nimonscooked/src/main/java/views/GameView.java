@@ -9,6 +9,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -170,12 +171,17 @@ public class GameView {
             loadImageOriginalSize("station_assembly", "/images/stations/assembly.png");
             loadImageOriginalSize("station_washing", "/images/stations/washing.png");
             loadImageOriginalSize("station_cutting", "/images/stations/cutting.png");
+            loadImageOriginalSize("station_ingredient_tomato", "/images/stations/tomato_storage.png");
+            loadImageOriginalSize("station_ingredient_cheese", "/images/stations/cheese_storage.png");
+            loadImageOriginalSize("station_ingredient_dough", "/images/stations/dough_storage.png");
+            loadImageOriginalSize("station_ingredient_sausage", "/images/stations/sausage_storage.png");
+            loadImageOriginalSize("station_ingredient_chicken", "/images/stations/chicken_storage.png");
             loadImageOriginalSize("floor", "/images/stations/floor.png");
             loadImageOriginalSize("wall", "/images/stations/wall.png");
 
             // Load plate (dirty, clean)
-            loadImageOriginalSize("plate_empty", "/images/items/plate_empty.png");
-            loadImageOriginalSize("plate_dirty", "/images/items/plate_dirty.png");
+            loadImageOriginalSize("plate_empty", "/images/utensils/plate.png");
+            loadImageOriginalSize("plate_dirty", "/images/utensils/plate_dirty.png");
 
 
             System.out.println("[GameView] Loaded " + imageCache.size() + " images successfully");
@@ -480,6 +486,16 @@ public class GameView {
         box.setPrefWidth(100);
         box.setStyle("-fx-background-color: #4A4A4A; -fx-background-radius: 8;");
 
+        String pizzaImageKey = getPizzaImageKeyFromRecipe(order.getRecipe());
+        if (useImages && pizzaImageKey != null && hasImage(pizzaImageKey)) {
+            ImageView pizzaView = new ImageView(getImage(pizzaImageKey));
+            pizzaView.setFitWidth(50);
+            pizzaView.setFitHeight(50);
+            pizzaView.setPreserveRatio(true);
+            box.getChildren().add(pizzaView);
+        }
+
+
         Label nameLabel = new Label(getShortName(order.getRecipe().getName()));
         nameLabel.setFont(Font.font("Inter", FontWeight.BOLD, 10));
         nameLabel.setTextFill(Color.WHITE);
@@ -497,6 +513,20 @@ public class GameView {
         box.getChildren().addAll(nameLabel, timeLabel, ingredientsBox, progressBar);
 
         return box;
+    }
+
+    private String getPizzaImageKeyFromRecipe(Recipe recipe) {
+        String recipeName = recipe.getName().toLowerCase();
+
+        if (recipeName.contains("margherita")) {
+            return "pizza_margherita";
+        } else if (recipeName.contains("sosis") || recipeName.contains("sausage")) {
+            return "pizza_sosis";
+        } else if (recipeName.contains("ayam") || recipeName.contains("chicken")) {
+            return "pizza_ayam";
+        }
+
+        return null; // Unknown pizza type
     }
 
     private String getShortName(String fullName) {
@@ -618,15 +648,31 @@ public class GameView {
     }
 
     private String getStationImageKey(Station station) {
+        if (station.getType() == StationType.INGREDIENT_STORAGE) {
+            // Get specific ingredient type
+            if (station instanceof IngredientStorage storage) {
+                IngredientType type = storage.getIngredientType();
+                return switch (type) {
+                    case TOMATO -> "station_ingredient_tomato";
+                    case CHEESE -> "station_ingredient_cheese";
+                    case DOUGH -> "station_ingredient_dough";
+                    case SAUSAGE -> "station_ingredient_sausage";
+                    case CHICKEN -> "station_ingredient_chicken";
+                    default -> "station_ingredient";
+                };
+            }
+            return "station_ingredient";
+        }
+
         return switch (station.getType()) {
             case CUTTING -> "station_cutting";
             case COOKING -> "station_cooking";
             case ASSEMBLY -> "station_assembly";
             case SERVING_COUNTER -> "station_serving";
             case WASHING -> "station_washing";
-            case INGREDIENT_STORAGE -> "station_ingredient";
             case PLATE_STORAGE -> "station_plate";
             case TRASH -> "station_trash";
+            default -> "floor";
         };
     }
 
@@ -985,17 +1031,21 @@ public class GameView {
             boolean imageDrawn = false;
 
             if (useImages && hasImage(imageKey)) {
-                // Draw chef image - smoothly scaled
-                gc.drawImage(getImage(imageKey), x, y, TILE_SIZE, TILE_SIZE);
-                imageDrawn = true;
-            } else if (useImages && isChef1) {
-                // Try base direction image
+            // Draw chef image - smoothly scaled
+            gc.drawImage(getImage(imageKey), x, y, TILE_SIZE, TILE_SIZE);
+            imageDrawn = true;
+} 
+            // ⭐ UBAH: Fallback untuk SEMUA chef, bukan hanya Chef1
+            else if (useImages) {
+                // Try base direction image (without item)
                 String baseKey = getChefBaseImageKey(chef, isChef1);
                 if (hasImage(baseKey)) {
                     gc.drawImage(getImage(baseKey), x, y, TILE_SIZE, TILE_SIZE);
                     imageDrawn = true;
                 }
-            } else if (useImages && !isChef1 && hasImage("chef2")) {
+            }
+            // Fallback terakhir: gambar bulatan
+            else if (useImages && !isChef1 && hasImage("chef2")) {
                 gc.drawImage(getImage("chef2"), x, y, TILE_SIZE, TILE_SIZE);
                 imageDrawn = true;
             }
@@ -1038,6 +1088,7 @@ public class GameView {
     }
 
     private String getChefImageKey(ChefPlayer chef, boolean isChef1) {
+        //⭐ UBAH: karena pas load image untuk chef2, tetep gak muncul di gamenya
         String chefPrefix = isChef1 ? "chef1" : "chef2";
        
         String direction = switch (chef.getDirection()) {
@@ -1063,6 +1114,7 @@ public class GameView {
 
 
     private String getChefBaseImageKey(ChefPlayer chef, boolean isChef1) {
+        //⭐ UBAH: karena pas load image untuk chef2, tetep gak muncul di gamenya
         String chefPrefix = isChef1 ? "chef1" : "chef2";
        
         String direction = switch (chef.getDirection()) {
@@ -1239,7 +1291,21 @@ public class GameView {
             gc.setFont(Font.font("Inter", FontWeight.BOLD, 9));
             gc.fillText(displayText, x + 2, y + TILE_SIZE + 13);
         } else {
-            // Other items - existing code
+            // ⭐ TAMBAHKAN: Draw icon untuk item lain (apple, dll)
+            int iconX = x + TILE_SIZE - 18;
+            int iconY = y - 18;
+            
+            // Draw generic item icon
+            gc.setFill(Color.ORANGE);
+            gc.fillRect(iconX, iconY, 16, 16);
+            
+            // Draw first letter of item name
+            gc.setFill(Color.WHITE);
+            gc.setFont(Font.font("Arial", FontWeight.BOLD, 10));
+            String firstLetter = item.getName().substring(0, 1).toUpperCase();
+            gc.fillText(firstLetter, iconX + 4, iconY + 12);
+
+            // Draw text label below (kode yang sudah ada)
             String displayText = item.getName().substring(0, Math.min(6, item.getName().length()));
             int boxWidth = Math.max(TILE_SIZE, displayText.length() * 6 + 10);
 
