@@ -1,20 +1,20 @@
 package controllers;
 
-import models. item. Dish;
+import models.item.Dish;
+import models.item.PizzaDish;
+import models.item.kitchenutensils.Plate;
 import models.level.*;
 import models.player.ChefPlayer;
 import models.core.Position;
-import models. map.GameMap;
+import models.map.GameMap;
 import models.map.MapType;
-import models. order.*;
+import models.order.*;
 import models.recipe.*;
+import models.station.CookingStation;
+import models.station.PlateStorage;
+import models.station.Station;
 
-import java.util. ArrayList;
-import java.util.HashMap;
-import java. util.Iterator;
-import java. util.List;
-import java.util. Map;
-import java.util.Random;
+import java.util.*;
 
 public class Stage {
     private final String id;
@@ -37,40 +37,43 @@ public class Stage {
     private int expiredOrders;
     private List<Recipe> availableRecipes;
     private Map<Order, Integer> orderTimers;
+    private Timer plateReturnTimer;
+    private static final int PLATE_RETURN_DELAY_MS = 10000;
 
     public Stage(String id, MapType mapType, GameMap gameMap) {
-        this. id = id;
+        this.id = id;
         this.mapType = mapType;
         this.gameMap = gameMap;
         this.chefs = new ArrayList<>();
         this.activeChefIndex = 0;
-        this. orderQueue = new OrderQueue();
+        this.orderQueue = new OrderQueue();
         this.score = 0;
-        this. timeRemaining = 180;
+        this.timeRemaining = 180;
         this.gameRunning = false;
-        this. failedOrdersCount = 0;
+        this.failedOrdersCount = 0;
         this.maxFailedOrders = 5;
-        this. random = new Random();
+        this.random = new Random();
         this.orderSpawnInterval = 30;
-        this. maxActiveOrders = 5;
-        this. orderSpawnTimer = 0;
+        this.maxActiveOrders = 5;
+        this.orderSpawnTimer = 0;
         this.orderTimeout = 60;
         this.successfulOrders = 0;
-        this. expiredOrders = 0;
+        this.expiredOrders = 0;
         this.orderTimers = new HashMap<>();
+        this.plateReturnTimer = new Timer(true);
         initializeRecipes();
     }
 
     private void initializeRecipes() {
         availableRecipes = new ArrayList<>();
         availableRecipes.add(PizzaRecipeFactory.createPizzaMargherita());
-        availableRecipes.add(PizzaRecipeFactory. createPizzaSosis());
+        availableRecipes.add(PizzaRecipeFactory.createPizzaSosis());
         availableRecipes.add(PizzaRecipeFactory.createPizzaAyam());
     }
 
     public void applyLevelSettings(Level level) {
-        this.timeRemaining = level. getTimeLimit();
-        this. maxFailedOrders = level.getMaxFailedOrders();
+        this.timeRemaining = level.getTimeLimit();
+        this.maxFailedOrders = level.getMaxFailedOrders();
         this.orderSpawnInterval = level.getOrderSpawnInterval();
         this.maxActiveOrders = level.getMaxActiveOrders();
         this.orderTimeout = level.getOrderTimeout();
@@ -78,7 +81,9 @@ public class Stage {
     }
 
     public void initStage() {
-        List<Position> spawns = gameMap. getChefSpawns();
+        gameMap.setStageForServingCounters(this);
+
+        List<Position> spawns = gameMap.getChefSpawns();
         if (spawns.size() >= 2) {
             ChefPlayer chef1 = new ChefPlayer("chef_0", "Chef 1", spawns.get(0));
             ChefPlayer chef2 = new ChefPlayer("chef_1", "Chef 2", spawns.get(1));
@@ -109,12 +114,22 @@ public class Stage {
         }
         handleOrderTimeouts();
         updateOrderSpawning();
+        updateStations();
+    }
+
+    private void updateStations() {
+        Map<Position, Station> stations = gameMap.getAllStations();
+        for (Station station : stations.values()) {
+            if (station instanceof CookingStation) {
+                ((CookingStation) station).update();
+            }
+        }
     }
 
     private void handleOrderTimeouts() {
         List<Order> expiredList = new ArrayList<>();
 
-        for (Map.Entry<Order, Integer> entry : orderTimers. entrySet()) {
+        for (Map.Entry<Order, Integer> entry : orderTimers.entrySet()) {
             Order order = entry.getKey();
             int timeLeft = entry.getValue() - 1;
             if (timeLeft <= 0) {
@@ -137,7 +152,7 @@ public class Stage {
     private void removeOrderFromQueue(Order orderToRemove) {
         List<Order> remainingOrders = new ArrayList<>();
         while (!orderQueue.isEmpty()) {
-            Order order = orderQueue. poll();
+            Order order = orderQueue.poll();
             if (order != orderToRemove) {
                 remainingOrders.add(order);
             }
@@ -175,10 +190,15 @@ public class Stage {
                 orderQueue.size() + 1,
                 recipe,
                 recipe.getBaseReward(),
-                recipe. getBasePenalty()
+                recipe.getBasePenalty()
         );
+
         orderQueue.addOrder(order);
-        orderTimers.put(order, orderTimeout);
+
+        int orderTime = recipe.getServeTimeSeconds();
+        orderTimers.put(order, orderTime);
+
+        System.out.println("[STAGE] New order:  " + recipe.getName() + " (Serve time: " + orderTime + "s)");
     }
 
     public void startGame() {
@@ -200,7 +220,7 @@ public class Stage {
     }
 
     public void addChef(ChefPlayer chef) {
-        chefs. add(chef);
+        chefs.add(chef);
     }
 
     public List<ChefPlayer> getChefs() {
@@ -211,44 +231,100 @@ public class Stage {
         return orderQueue;
     }
 
-    public int validateServe(Dish dish) {
-        if (orderQueue.isEmpty() || dish == null)
+    public int validateServe(Dish dish, Plate plate) {
+        if (orderQueue.isEmpty() || dish == null) {
+            System.out.println("[STAGE] No orders or dish is null");
+            schedulePlateReturn(plate);
             return 0;
-        Order matchingOrder = findMatchingOrder(dish. getName());
-        if (matchingOrder != null) {
-            Recipe recipe = matchingOrder.getRecipe();
-            boolean match = RecipeMatcher.doesDishMatchRecipe(dish, recipe);
-            if (match) {
-                score += matchingOrder.getReward();
-                removeOrderFromQueue(matchingOrder);
-                orderTimers.remove(matchingOrder);
-                successfulOrders++;
-                if (orderQueue.size() < maxActiveOrders) {
-                    generateNewOrder();
-                }
-                return matchingOrder.getReward();
+        }
+
+        if (dish instanceof PizzaDish pizza) {
+            if (!pizza.isBaked()) {
+                System.out.println("[STAGE] Pizza is not baked!");
+                return 0;
             }
         }
 
-        Order firstOrder = orderQueue.peek();
-        if (firstOrder != null) {
-            int wrongPenalty = calculateWrongDishPenalty(firstOrder);
-            score -= wrongPenalty;
-            failedOrdersCount++;
-            return -wrongPenalty;
-        }
+        Order matchingOrder = findMatchingOrderByIngredients(dish);
 
-        return 0;
+        if (matchingOrder != null) {
+            int reward = matchingOrder.getReward();
+            score += reward;
+            removeOrderFromQueue(matchingOrder);
+            orderTimers.remove(matchingOrder);
+            successfulOrders++;
+
+            System.out.println("[STAGE] ✓ Order completed: " + matchingOrder.getRecipe().getName() + " (+$" + reward + ")");
+
+            if (orderQueue.size() < maxActiveOrders) {
+                generateNewOrder();
+            }
+
+            schedulePlateReturn(plate);
+
+            return reward;
+        } else {
+            Order firstOrder = orderQueue.peek();
+            int penalty = 0;
+            if (firstOrder != null) {
+                penalty = calculateWrongDishPenalty(firstOrder);
+                score -= penalty;
+                failedOrdersCount++;
+                System.out.println("[STAGE] ✗ Wrong dish served! Eaten by Kak Jendra (-$" + penalty + ")");
+            }
+
+            schedulePlateReturn(plate);
+
+            return -penalty;
+        }
     }
 
-    private Order findMatchingOrder(String recipeName) {
+    public int validateServe(Dish dish) {
+        return validateServe(dish, null);
+    }
+
+    private Order findMatchingOrderByIngredients(Dish dish) {
         List<Order> allOrders = getAllOrdersFromQueue();
+
         for (Order order : allOrders) {
-            if (order. getRecipe().getName().equals(recipeName)) {
+            Recipe recipe = order.getRecipe();
+
+            if (recipe.isSatisfiedBy(dish.getComponents())) {
+                System.out.println("[STAGE] Dish matches recipe:  " + recipe.getName());
                 return order;
             }
         }
+
+        System.out.println("[STAGE] No matching order found for dish with " + dish.getComponents().size() + " ingredients");
         return null;
+    }
+
+    private void schedulePlateReturn(Plate plate) {
+        if (plate == null) return;
+
+        plate.markDirty();
+        plate.setDish(null);
+
+        plateReturnTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                returnPlateToStorage(plate);
+            }
+        }, PLATE_RETURN_DELAY_MS);
+
+        System.out.println("[STAGE] Plate will return to storage in 10 seconds");
+    }
+
+    private void returnPlateToStorage(Plate plate) {
+        Map<Position, Station> stations = gameMap.getAllStations();
+        for (Station station : stations.values()) {
+            if (station instanceof PlateStorage plateStorage) {
+                plateStorage.pushDirtyPlate(plate);
+                System.out.println("[STAGE] Dirty plate returned to storage");
+                return;
+            }
+        }
+        System.out.println("[STAGE] Warning: No PlateStorage found!");
     }
 
     private List<Order> getAllOrdersFromQueue() {
@@ -256,7 +332,7 @@ public class Stage {
         List<Order> temp = new ArrayList<>();
 
         while (!orderQueue.isEmpty()) {
-            Order order = orderQueue. poll();
+            Order order = orderQueue.poll();
             orders.add(order);
             temp.add(order);
         }
@@ -274,7 +350,9 @@ public class Stage {
 
     public double getOrderTimeProgress(Order order) {
         int remaining = orderTimers.getOrDefault(order, 0);
-        return (double) remaining / orderTimeout;
+        Recipe recipe = order.getRecipe();
+        int maxTime = recipe.getServeTimeSeconds();
+        return (double) remaining / maxTime;
     }
 
     public List<Order> getAllOrders() {
@@ -323,7 +401,6 @@ public class Stage {
 
     public int getOrderSpawnInterval() {
         return orderSpawnInterval;
-
     }
 
     public int getMaxActiveOrders() {
